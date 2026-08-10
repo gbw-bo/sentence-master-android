@@ -170,6 +170,15 @@ async function init() {
   } catch (e) {}
   api.onTheme(isDark => applyTheme(isDark));
 
+  // 启动时恢复已保存的打卡提醒（通知 / 日历）
+  try {
+    if (DATA.settings.remindEnabled && DATA.settings.remindChannel
+        && DATA.settings.remindChannel !== 'none') {
+      api.setReminder({ enabled: true, time: DATA.settings.remindTime || '20:00',
+                        channel: DATA.settings.remindChannel });
+    }
+  } catch (e) {}
+
   navigate('learn');
 }
 
@@ -684,12 +693,25 @@ function copyTemplate(id) {
 /* ============ 设置 ============ */
 function renderSettings() {
   const s = DATA.settings;
+  const channel = s.remindChannel || (s.remindEnabled ? 'notification' : 'none');
+  const notiOn = channel === 'notification' || channel === 'both';
+  const calOn = channel === 'calendar' || channel === 'both';
   let html = `<div class="page">
     <div class="page-head"><button class="back-btn" onclick="navBack()">← 返回</button></div>
     <h1>设置</h1><div class="sub">个性化你的学习节奏。改完会自动保存。</div>
   <div class="card">
     <div class="set-row" style="border:0"><div><div class="lab">每日目标</div><div class="desc">每天学会几个句式（默认 1 个，稳扎稳打）</div></div>
       <div class="ctrl"><input type="number" id="setGoal" min="1" max="5" value="${s.dailyGoal || 1}" style="width:80px"></div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <div class="set-row"><div><div class="lab">打卡提醒</div><div class="desc">到时间提醒你完成今日打卡</div></div>
+      <div class="ctrl"><input type="checkbox" id="setRemind" ${notiOn || calOn ? 'checked' : ''}></div></div>
+    <div class="set-row"><div><div class="lab">提醒时间</div><div class="desc">每天这个时刻提醒你</div></div>
+      <div class="ctrl"><input type="time" id="setTime" value="${s.remindTime || '20:00'}" style="width:130px"></div></div>
+    <div class="set-row"><div><div class="lab">通知提醒</div><div class="desc">在本机弹出系统通知（Android 13+ 需授权）</div></div>
+      <div class="ctrl"><input type="checkbox" id="setNoti" ${notiOn ? 'checked' : ''}></div></div>
+    <div class="set-row" style="border:0"><div><div class="lab">写入系统日历</div><div class="desc">在日历里创建每天重复的打卡事件（需日历权限）</div></div>
+      <div class="ctrl"><input type="checkbox" id="setCal" ${calOn ? 'checked' : ''}></div></div>
   </div>
   <div class="card" style="margin-top:16px">
     <div class="set-row" style="border:0"><div><div class="lab">外观主题</div><div class="desc">浅色 / 深色 / 跟随系统，实时切换</div></div>
@@ -714,14 +736,50 @@ function renderSettings() {
   </div>`;
   return html;
 }
+let _reminderState = { enabled: false, time: '20:00', channel: 'none' };
+function currentReminderChannel(noti, cal) { return noti && cal ? 'both' : noti ? 'notification' : cal ? 'calendar' : 'none'; }
+function applyReminder() {
+  const n = $('#setNoti') ? $('#setNoti').checked : false;
+  const c = $('#setCal') ? $('#setCal').checked : false;
+  const t = $('#setTime') ? $('#setTime').value : '20:00';
+  const enabled = ($('#setRemind') ? $('#setRemind').checked : false) && (n || c);
+  const channel = currentReminderChannel(n, c);
+  if (!enabled) {
+    DATA.settings.remindEnabled = false;
+    DATA.settings.remindTime = t;
+    DATA.settings.remindChannel = 'none';
+    save(); api.cancelReminder();
+    toast('已关闭打卡提醒');
+    return;
+  }
+  DATA.settings.remindEnabled = true;
+  DATA.settings.remindTime = t;
+  DATA.settings.remindChannel = channel;
+  save();
+  api.requestReminderPermissions();
+  api.setReminder({ enabled: true, time: t, channel: channel });
+  toast('打卡提醒已开启');
+}
 async function bindSettings() {
   const g = $('#setGoal'); if (g) g.onchange = async () => {
     let v = Math.max(1, Math.min(5, parseInt(g.value) || 1)); g.value = v;
     DATA.settings.dailyGoal = v; ensureTodayPlan(); await save(); renderSidebar(); toast('每日目标已设为 ' + v);
   };
+  const r = $('#setRemind'); if (r) r.onchange = applyReminder;
+  const n = $('#setNoti'); if (n) n.onchange = applyReminder;
+  const c = $('#setCal'); if (c) c.onchange = applyReminder;
+  const t = $('#setTime'); if (t) t.onchange = applyReminder;
   const seg = $('#setTheme');
   if (seg) Array.prototype.slice.call(seg.querySelectorAll('button')).forEach(b => b.classList.toggle('active', b.dataset.v === (DATA.settings.theme || 'system')));
 }
+/* 原生回调：权限 / 提醒设置结果 */
+window.__smPermResult = function (r) {
+  if (r && !r.ok) toast('未授予权限，提醒可能无法生效');
+};
+window.__smReminderResult = function (r) {
+  if (r && r.ok) toast(r.msg);
+  else if (r && r.msg) toast(r.msg);
+};
 async function doExport() { const r = await api.exportData(); if (r.ok) toast('已导出到 ' + r.path); else if (!r.ok) toast('已取消导出'); }
 async function doImport() { const r = await api.importData(); if (r.ok) { DATA = await api.readData(); ensureTodayPlan(); await save(); toast('导入成功'); navigate('learn'); } else if (r.msg) toast(r.msg); }
 
@@ -816,7 +874,8 @@ async function renderUpdate() {
   <div class="card" style="margin-top:16px">
     <div style="font-weight:800;margin-bottom:6px">更新日志</div>
     <div class="changelog"><ul>
-      <li><b>v1.4.5</b>（当前）Android 版适配与设置精简：① 兼容安卓 8 – 安卓 15 安装（升级目标 SDK 至 35）；② 移除仅适用于电脑端的设置项——开机自启动、每日提醒、最小化到托盘、模块透明度等，设置页只保留移动端适用的选项（每日目标 / 外观主题 / 学习数据）；③ 更新改为从 GitHub 获取 APK 安装包，点击即可用浏览器下载安装。</li>
+      <li><b>v1.4.6</b>（当前）移动端体验升级：① 深色模式全面适配——界面使用显式深色背景与配色，不再受 WebView 白底影响；② 新增打卡提醒——可开启系统通知提醒，或将每日打卡写入系统日历（两种方式可同时开启）；③ 兼容安卓 16（目标 SDK 升至 36）；④ 应用图标换成与电脑端一致的图标。</li>
+      <li><b>v1.4.5</b>Android 版适配与设置精简：① 兼容安卓 8 – 安卓 15 安装（升级目标 SDK 至 35）；② 移除仅适用于电脑端的设置项——开机自启动、每日提醒、最小化到托盘、模块透明度等，设置页只保留移动端适用的选项（每日目标 / 外观主题 / 学习数据）；③ 更新改为从 GitHub 获取 APK 安装包，点击即可用浏览器下载安装。</li>
       <li><b>v1.4.4</b>修复白屏与横屏按钮：① 修复部分安卓设备（旧版 WebView）打开后内容空白的问题——兼容了旧版 WebView 的 JS 语法；② 平板横屏时不再显示右上角「最小化 / 关闭」按钮。</li>
       <li><b>v1.4.3</b>新增「历史记录」与更新数据保护：① 将原本放在「学习中」第 6 步的「查看历史」移出，在「我的」页新增独立「历史记录」入口，可查看你学过的全部句式与练习时写下的每一句话；② 强化更新安全——每次更新应用前自动备份学习数据与所有设置项，更新后若本地数据意外丢失 / 损坏会自动从备份恢复，确保提醒时间、学习阶段等设置项与学习进度在更新后完整保留。</li>
       <li><b>v1.4.2</b>撤销云端同步、补全返回按钮：经实测，supabase.co 在中国大陆直连被阻断、且 Supabase 需要实名，你无法稳定使用多端同步；故此版本彻底移除了 Supabase 账号 / 同步 / 代理相关代码，「我的」页回归纯本地（仅含设置与关于）。同时修复导航缺陷——「我的 → 设置 → 更新」每一级左上角均新增「← 返回」按钮，可逐级退回上一级菜单。</li>
@@ -838,10 +897,10 @@ function renderUpdateStatus() {
   const box = document.getElementById('updResult'); if (!box) return;
   const s = updateState;
   if (s.dev) { box.innerHTML = `<div class="note">开发模式下不检查更新。打包后的版本会自动连接 GitHub 更新。</div>`; return; }
-  if (s.error) { box.innerHTML = `<div class="note" style="background:#fef2f2;border-color:#fecaca;color:#b91c1c">更新出错：${esc((s.error && s.error.message) || s.error)}</div>`; return; }
+  if (s.error) { box.innerHTML = `<div class="note" style="background:var(--panel-2);border-color:rgba(209,52,56,.35);color:var(--bad)">更新出错：${esc((s.error && s.error.message) || s.error)}</div>`; return; }
   if (s.downloaded) {
-    box.innerHTML = `<div class="card" style="background:#ecfdf5;border-color:#a7f3d0;margin:0">
-      <div style="font-weight:700;color:#047857">v${esc(s.downloaded.version)} 已下载完成 ✅</div>
+    box.innerHTML = `<div class="card" style="background:var(--panel-2);border-color:rgba(19,161,14,.35);margin:0">
+      <div style="font-weight:700;color:var(--good)">v${esc(s.downloaded.version)} 已下载完成 ✅</div>
       <div style="font-size:13px;color:var(--ink-soft);margin:6px 0">重启应用即可完成升级，你的学习数据会原样保留。</div>
       <button class="btn primary sm" onclick="doInstallUpdate()">立即重启并更新</button>
     </div>`; return;
@@ -851,13 +910,13 @@ function renderUpdateStatus() {
     const speed = s.progress.bytesPerSecond ? (s.progress.bytesPerSecond / 1024 / 1024).toFixed(1) + ' MB/s' : '';
     box.innerHTML = `<div class="card" style="margin:0">
       <div style="font-weight:700">正在下载${s.available ? ' v' + esc(s.available.version) : ''} … ${pct}%</div>
-      <div style="height:8px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:8px"><div style="height:100%;width:${pct}%;background:var(--accent);transition:width .3s"></div></div>
+      <div style="height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px"><div style="height:100%;width:${pct}%;background:var(--accent);transition:width .3s"></div></div>
       <div style="font-size:12px;color:var(--ink-soft);margin-top:6px">${speed}</div>
     </div>`; return;
   }
   if (s.available) {
     box.innerHTML = `<div class="card" style="margin:0">
-      <div style="font-weight:700;color:#047857">发现新版本 v${esc(s.available.version)} 🎉</div>
+      <div style="font-weight:700;color:var(--good)">发现新版本 v${esc(s.available.version)} 🎉</div>
       <div style="font-size:13px;color:var(--ink-soft);margin:6px 0">${esc(s.available.notes || '')}</div>
       <button class="btn primary" onclick="downloadUpdate()">下载并安装 APK</button>
       <div style="font-size:12px;color:var(--ink-soft);margin-top:6px">点击后会用系统浏览器打开下载页，下载完成后点击 APK 文件即可安装（数据不会丢失）。</div>
