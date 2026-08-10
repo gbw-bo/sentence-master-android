@@ -3,6 +3,42 @@
  * 平板横屏：还原为 Windows 端布局（顶部品牌栏 + 左侧侧栏 + 内容）。
  */
 
+/* ============ Android 显式配色（不依赖系统毛玻璃） ============
+ * Windows 端 body 透明、靠系统 Acrylic 毛玻璃兜底；Android WebView 没有毛玻璃，
+ * 透明背景会直接露出默认白色底（深色模式下浅色文字+白底=白屏）。
+ * 故在 Android 上为浅色/深色各定义一套显式、不透明的背景与色块。 */
+:root {
+  --bg: #f5f6fa;
+  --panel: rgba(255, 255, 255, 0.88);
+  --panel-solid: #ffffff;
+  --panel-2: rgba(17, 24, 39, 0.045);
+  --modal-bg: #ffffff;
+  --chrome-bg: #f5f6fa;
+}
+[data-theme="dark"] {
+  --bg: #15151c;
+  --panel: rgba(31, 31, 41, 0.92);
+  --panel-solid: #26262f;
+  --panel-2: rgba(255, 255, 255, 0.055);
+  --modal-bg: #20202a;
+  --chrome-bg: #1b1b24;
+  --ink: #f1f1f4;
+  --ink-soft: #b6b6c0;
+  --ink-faint: #82828c;
+  --line: rgba(255, 255, 255, 0.12);
+  --accent: #4cc2ff;
+  --accent-hover: #7fd0ff;
+  --accent-soft: rgba(76, 194, 255, 0.16);
+  --good: #6ccb5f;
+  --warn: #f5c518;
+  --bad: #ff6b6b;
+}
+/* body 实心底色（关键修复：深色模式不再露出白色底） */
+body { background: var(--bg); }
+[data-theme="dark"] .tag.good { background: rgba(108, 203, 95, 0.18); color: #6ccb5f; }
+[data-theme="dark"] .note { color: #f5d97a; }
+
+
 /* ---------- 基础布局（手机优先） ---------- */
 html, body { height: 100%; margin: 0; }
 body {
