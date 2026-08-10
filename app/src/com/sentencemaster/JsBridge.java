@@ -36,7 +36,7 @@ public class JsBridge {
             + "\"progress\":{},\"history\":[],\"writings\":{},"
             + "\"streak\":{\"current\":0,\"best\":0,\"lastDate\":\"\"},"
             + "\"todayPlan\":{\"date\":\"\",\"ids\":[],\"doneIds\":[]},\"writeHistory\":{}}";
-    static final String VER = "1.4.4";
+    static final String VER = "1.4.5";
 
     JsBridge(MainActivity activity, WebView webView) {
         this.activity = activity;
