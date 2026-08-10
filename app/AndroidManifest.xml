@@ -2,11 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.sentencemaster"
-    android:versionCode="5"
-    android:versionName="1.4.5">
+    android:versionCode="6"
+    android:versionName="1.4.6">
 
     <!-- 检查更新需联网访问 GitHub Releases API -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 本地通知（Android 13+ 运行时请求） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 打卡提醒写入系统日历 -->
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <application
         android:allowBackup="true"
@@ -31,9 +36,14 @@
             android:exported="false"
             android:theme="@style/Theme.SentenceMaster"
             android:windowSoftInputMode="adjustResize" />
+
+        <!-- 每日打卡提醒：由 AlarmManager 触发 -->
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false" />
     </application>
 
     <uses-sdk
         android:minSdkVersion="24"
-        android:targetSdkVersion="35" />
+        android:targetSdkVersion="36" />
 </manifest>
