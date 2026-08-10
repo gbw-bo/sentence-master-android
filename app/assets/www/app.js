@@ -15,10 +15,6 @@ let CURRENT_VER = '';
 const STAGES = ['all', '通用基础', '高中重点'];
 function stageOf(s) { return s.stage || '通用基础'; }
 function applyTheme(isDark) { document.documentElement.dataset.theme = isDark ? 'dark' : 'light'; }
-function applyTransparency(v) {
-  v = Math.max(10, Math.min(100, v | 0));
-  document.documentElement.style.setProperty('--glass-mul', (v / 100).toString());
-}
 async function setThemeMode(mode) {
   DATA.settings.theme = mode; await save();
   const sysDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -162,8 +158,6 @@ async function init() {
   const sysDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   applyTheme(themeMode === 'dark' || (themeMode === 'system' && sysDark));
   try { api.applyTheme(themeMode); } catch (e) {}
-  // 透明度：应用保存的模块透明度（30~100）
-  applyTransparency(DATA.settings.transparency == null ? 100 : DATA.settings.transparency);
   // 同步启动静默检查可能已完成的更新状态
   try {
     const us = await api.getUpdateState();
@@ -694,28 +688,16 @@ function renderSettings() {
     <div class="page-head"><button class="back-btn" onclick="navBack()">← 返回</button></div>
     <h1>设置</h1><div class="sub">个性化你的学习节奏。改完会自动保存。</div>
   <div class="card">
-    <div class="set-row"><div><div class="lab">每日目标</div><div class="desc">每天学会几个句式（默认 1 个，稳扎稳打）</div></div>
+    <div class="set-row" style="border:0"><div><div class="lab">每日目标</div><div class="desc">每天学会几个句式（默认 1 个，稳扎稳打）</div></div>
       <div class="ctrl"><input type="number" id="setGoal" min="1" max="5" value="${s.dailyGoal || 1}" style="width:80px"></div></div>
-    <div class="set-row"><div><div class="lab">开机自动启动</div><div class="desc">电脑一开机就弹出，催你学习（打包后才生效）</div></div>
-      <div class="ctrl"><input type="checkbox" id="setAuto" ${s.autoLaunch ? 'checked' : ''}></div></div>
-    <div class="set-row"><div><div class="lab">每日提醒</div><div class="desc">到时间还没学完，弹通知催你</div></div>
-      <div class="ctrl"><input type="checkbox" id="setRemind" ${s.remindEnabled ? 'checked' : ''}></div></div>
-    <div class="set-row"><div><div class="lab">提醒时间</div><div class="desc">每天这个时刻检查你是否完成</div></div>
-      <div class="ctrl"><input type="time" id="setTime" value="${s.remindTime || '20:00'}" style="width:120px"></div></div>
-    <div class="set-row"><div><div class="lab">关闭时最小化到托盘</div><div class="desc">点关闭不退出，后台常驻，随时点开</div></div>
-      <div class="ctrl"><input type="checkbox" id="setMin" ${s.minimizeToTray ? 'checked' : ''}></div></div>
-    <div class="set-row"><div><div class="lab">开机自启时自动弹出</div><div class="desc">若今天已学完则安静待在托盘</div></div>
-      <div class="ctrl"><input type="checkbox" id="setShow" ${s.showOnLaunch ? 'checked' : ''}></div></div>
   </div>
   <div class="card" style="margin-top:16px">
-    <div class="set-row" style="border:0"><div><div class="lab">外观主题</div><div class="desc">浅色 / 深色 / 跟随系统，实时切换并同步窗口底色</div></div>
+    <div class="set-row" style="border:0"><div><div class="lab">外观主题</div><div class="desc">浅色 / 深色 / 跟随系统，实时切换</div></div>
       <div class="ctrl"><div class="seg" id="setTheme">
         <button data-v="light" onclick="setThemeMode('light')">浅色</button>
         <button data-v="dark" onclick="setThemeMode('dark')">深色</button>
         <button data-v="system" onclick="setThemeMode('system')">跟随系统</button>
       </div></div></div>
-    <div class="set-row" style="border:0"><div><div class="lab">模块透明度</div><div class="desc">调节卡片与侧栏的半透明程度（越往左越透）</div></div>
-      <div class="ctrl" style="width:200px"><input type="range" id="setTrans" min="30" max="100" value="${s.transparency == null ? 100 : s.transparency}" style="width:100%"></div></div>
   </div>
   <div class="card" style="margin-top:16px">
     <div class="set-row" style="border:0"><div><div class="lab">学习数据</div><div class="desc">备份 / 恢复你的学习记录与打卡</div></div>
@@ -723,52 +705,30 @@ function renderSettings() {
         <button class="btn sm" onclick="doExport()">导出备份</button>
         <button class="btn sm" onclick="doImport()">导入恢复</button>
       </div></div>
-    <div class="set-row" style="border:0;margin-top:4px"><div><div class="lab">更改保存地址</div><div class="desc">把学习数据换到其它文件夹（如 D 盘 / 移动硬盘），已有记录会自动迁移过去</div></div>
-      <div class="ctrl btn-row">
-        <button class="btn sm primary" onclick="doChangeDataDir()">更改保存地址</button>
-      </div></div>
-    <div class="note">当前数据保存在本机：<code style="font-family:monospace;display:inline-block;max-width:100%;word-break:break-all">${esc(DATA_PATH || '（应用数据目录）')}</code></div>
+    <div class="note">学习数据只保存在本机，不联网上传；换机时用「导出备份」把文件传到新设备，再点「导入恢复」即可。</div>
     <div class="set-row" style="border:0;cursor:pointer;margin-top:12px" onclick="navigate('update')">
-      <div><div class="lab">🚀 检查更新</div><div class="desc">查看新版本、更新日志与一键升级</div></div>
+      <div><div class="lab">🚀 检查更新</div><div class="desc">从 GitHub 获取最新版 APK 安装包</div></div>
       <div class="ctrl" style="font-size:20px;color:var(--ink-faint)">›</div>
     </div>
   </div>
   </div>`;
   return html;
 }
-let DATA_PATH = '';
 async function bindSettings() {
   const g = $('#setGoal'); if (g) g.onchange = async () => {
     let v = Math.max(1, Math.min(5, parseInt(g.value) || 1)); g.value = v;
     DATA.settings.dailyGoal = v; ensureTodayPlan(); await save(); renderSidebar(); toast('每日目标已设为 ' + v);
   };
-  const a = $('#setAuto'); if (a) a.onchange = async () => { DATA.settings.autoLaunch = a.checked; await save(); await api.setAutoLaunch(a.checked); toast(a.checked ? '已开启开机自启' : '已关闭开机自启'); };
-  const r = $('#setRemind'); if (r) r.onchange = async () => { DATA.settings.remindEnabled = r.checked; await save(); };
-  const t = $('#setTime'); if (t) t.onchange = async () => { DATA.settings.remindTime = t.value; await save(); toast('提醒时间：' + t.value); };
-  const m = $('#setMin'); if (m) m.onchange = async () => { DATA.settings.minimizeToTray = m.checked; await save(); };
-  const sh = $('#setShow'); if (sh) sh.onchange = async () => { DATA.settings.showOnLaunch = sh.checked; await save(); };
   const seg = $('#setTheme');
   if (seg) Array.prototype.slice.call(seg.querySelectorAll('button')).forEach(b => b.classList.toggle('active', b.dataset.v === (DATA.settings.theme || 'system')));
-  const tr = $('#setTrans');
-  if (tr) tr.oninput = async () => { DATA.settings.transparency = parseInt(tr.value, 10) || 100; applyTransparency(DATA.settings.transparency); await save(); };
 }
 async function doExport() { const r = await api.exportData(); if (r.ok) toast('已导出到 ' + r.path); else if (!r.ok) toast('已取消导出'); }
 async function doImport() { const r = await api.importData(); if (r.ok) { DATA = await api.readData(); ensureTodayPlan(); await save(); toast('导入成功'); navigate('learn'); } else if (r.msg) toast(r.msg); }
-async function doChangeDataDir() {
-  const r = await api.pickDataDir();
-  if (!r || r.canceled) return;
-  if (!r.ok) { toast('更改失败：' + (r.msg || '未知错误')); return; }
-  // 迁移成功后重新加载数据并刷新界面
-  DATA = await api.readData();
-  DATA_PATH = await api.dataDir();
-  toast('保存地址已更新，历史记录已迁移到：' + r.dir);
-  renderSettings();
-}
 
 /* ============ 我的 ============ */
 function renderMe() {
   const histCount = Object.keys(DATA.writeHistory || {}).length;
-  return `<div class="page"><h1>我的</h1><div class="sub">学习数据保存在本机，可随时在「设置」中导出备份；换电脑时用备份文件迁移即可，无需联网账号。</div>
+  return `<div class="page"><h1>我的</h1><div class="sub">学习数据保存在本机，可随时在「设置」中导出备份；换设备（或与电脑端互通）时用备份文件迁移即可，无需联网账号。</div>
   <div class="card" style="margin-top:8px">
     <div class="set-row" style="border:0;cursor:pointer" onclick="navigate('settings')">
       <div><div class="lab">⚙️ 设置</div><div class="desc">学习目标、外观主题、数据备份等</div></div>
@@ -856,7 +816,9 @@ async function renderUpdate() {
   <div class="card" style="margin-top:16px">
     <div style="font-weight:800;margin-bottom:6px">更新日志</div>
     <div class="changelog"><ul>
-      <li><b>v1.4.3</b>（当前）新增「历史记录」与更新数据保护：① 将原本放在「学习中」第 6 步的「查看历史」移出，在「我的」页新增独立「历史记录」入口，可查看你学过的全部句式与练习时写下的每一句话；② 强化更新安全——每次更新应用前自动备份学习数据与所有设置项，更新后若本地数据意外丢失 / 损坏会自动从备份恢复，确保提醒时间、学习阶段等设置项与学习进度在更新后完整保留。</li>
+      <li><b>v1.4.5</b>（当前）Android 版适配与设置精简：① 兼容安卓 8 – 安卓 15 安装（升级目标 SDK 至 35）；② 移除仅适用于电脑端的设置项——开机自启动、每日提醒、最小化到托盘、模块透明度等，设置页只保留移动端适用的选项（每日目标 / 外观主题 / 学习数据）；③ 更新改为从 GitHub 获取 APK 安装包，点击即可用浏览器下载安装。</li>
+      <li><b>v1.4.4</b>修复白屏与横屏按钮：① 修复部分安卓设备（旧版 WebView）打开后内容空白的问题——兼容了旧版 WebView 的 JS 语法；② 平板横屏时不再显示右上角「最小化 / 关闭」按钮。</li>
+      <li><b>v1.4.3</b>新增「历史记录」与更新数据保护：① 将原本放在「学习中」第 6 步的「查看历史」移出，在「我的」页新增独立「历史记录」入口，可查看你学过的全部句式与练习时写下的每一句话；② 强化更新安全——每次更新应用前自动备份学习数据与所有设置项，更新后若本地数据意外丢失 / 损坏会自动从备份恢复，确保提醒时间、学习阶段等设置项与学习进度在更新后完整保留。</li>
       <li><b>v1.4.2</b>撤销云端同步、补全返回按钮：经实测，supabase.co 在中国大陆直连被阻断、且 Supabase 需要实名，你无法稳定使用多端同步；故此版本彻底移除了 Supabase 账号 / 同步 / 代理相关代码，「我的」页回归纯本地（仅含设置与关于）。同时修复导航缺陷——「我的 → 设置 → 更新」每一级左上角均新增「← 返回」按钮，可逐级退回上一级菜单。</li>
       <li><b>v1.4.1</b>修复登录报「Failed to fetch」：App 此前直连 Supabase 服务器，而 supabase.co 在部分网络下被阻断。现新增代理支持——主进程默认走系统代理，并在「我的」页可手动填写本机代理（如 Clash 的 7890 端口）；新增「测试连接」按钮可一键诊断网络是否可达。学习数据仍只存于你自己的 Supabase 免费项目。</li>
       <li><b>v1.4.0</b>新增「云端同步」：接入 Supabase，登录账号后学习数据（进度、打卡、生词本、模板收藏等）可在多台设备间同步。「我的」侧栏整合账号登录、同步与退出登录；原「设置」「更新」调整为「我的」下的子项（设置 → 更新）。另修复深色模式下底部提示弹窗白底白字不可见的问题。</li>
@@ -897,7 +859,8 @@ function renderUpdateStatus() {
     box.innerHTML = `<div class="card" style="margin:0">
       <div style="font-weight:700;color:#047857">发现新版本 v${esc(s.available.version)} 🎉</div>
       <div style="font-size:13px;color:var(--ink-soft);margin:6px 0">${esc(s.available.notes || '')}</div>
-      <div style="font-size:12px;color:var(--ink-soft)">正在准备下载…</div>
+      <button class="btn primary" onclick="downloadUpdate()">下载并安装 APK</button>
+      <div style="font-size:12px;color:var(--ink-soft);margin-top:6px">点击后会用系统浏览器打开下载页，下载完成后点击 APK 文件即可安装（数据不会丢失）。</div>
     </div>`; return;
   }
   if (s.noUpdate) { box.innerHTML = `<div style="color:var(--good);font-weight:600">✓ 已是最新版本（v${esc(CURRENT_VER)}）</div>`; return; }
@@ -912,14 +875,20 @@ async function doCheckUpdate() {
   catch (e) { updateState.checking = false; updateState.error = { message: String(e) }; renderUpdateStatus(); return; }
   if (r.dev) { updateState.checking = false; updateState.dev = true; renderUpdateStatus(); return; }
   if (r.ok && r.hasUpdate) {
-    // 主进程已自动开始下载，等待 progress / downloaded 事件
-    updateState.checking = false; updateState.available = { version: r.latest, notes: r.notes };
+    // Android 端：拿到 GitHub 最新 APK 信息，等待用户点击下载
+    updateState.checking = false;
+    updateState.available = { version: r.latest, notes: r.notes, downloadUrl: r.downloadUrl };
     renderUpdateStatus();
   } else if (r.ok && !r.hasUpdate) {
     updateState.checking = false; updateState.noUpdate = true; renderUpdateStatus();
   } else {
     updateState.checking = false; updateState.error = { message: r.msg || '检查失败' }; renderUpdateStatus();
   }
+}
+function downloadUpdate() {
+  const u = updateState.available && updateState.available.downloadUrl;
+  if (u) { try { api.openExternal(u); } catch (e) { toast('无法打开下载页'); } }
+  else toast('暂未获取到下载地址');
 }
 function doInstallUpdate() { api.quitAndInstall(); }
 
@@ -963,8 +932,5 @@ function nagGoLearn() { closeNag(); navigate('learn'); }
 
 /* ============ 启动 ============ */
 (async () => {
-  try {
-    DATA_PATH = await api.dataDir();
-  } catch (e) {}
   await init();
 })();
