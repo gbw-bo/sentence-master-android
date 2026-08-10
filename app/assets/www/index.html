@@ -15,7 +15,7 @@
   </header>
 
   <div id="chrome">
-    <div class="brand"><span class="dot"></span>句式大师 <span style="font-weight:400;opacity:.8;font-size:12px;">SentenceMaster 1.4.3</span></div>
+    <div class="brand"><span class="dot"></span>句式大师 <span style="font-weight:400;opacity:.8;font-size:12px;">SentenceMaster 1.4.4</span></div>
     <div class="win-btns">
       <button id="btnMin" title="最小化">—</button>
       <button id="btnClose" title="关闭">✕</button>
@@ -58,6 +58,28 @@
   <script src="data/templates.js"></script>
   <!-- 桥接层：定义 window.api，调用原生 SMBridge（必须在 app.js 之前） -->
   <script src="bridge.js"></script>
+  <!-- 调试辅助：捕获 JS 错误显示在页面（正常无感；出错时可见），便于定位问题 -->
+  <script>
+    (function () {
+      function showErr(msg) {
+        var box = document.getElementById('jsErr');
+        if (!box) {
+          box = document.createElement('div');
+          box.id = 'jsErr';
+          box.style.cssText = 'position:fixed;left:16px;right:16px;bottom:90px;z-index:99999;background:#fff1f0;color:#b71c1c;border:1px solid #ffa4a2;border-radius:10px;padding:12px 14px;font:12px/1.6 sans-serif;white-space:pre-wrap;box-shadow:0 4px 14px rgba(0,0,0,.18)';
+          document.body.appendChild(box);
+        }
+        box.textContent = '程序提示: ' + msg;
+      }
+      window.addEventListener('error', function (e) {
+        showErr((e && e.message ? e.message : '脚本错误') + (e && e.filename ? ' @' + e.filename.split('/').pop() + ':' + e.lineno : ''));
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e && e.reason;
+        showErr('Promise: ' + (r && r.message ? r.message : String(r)));
+      });
+    })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
