@@ -59,6 +59,10 @@
     },
     notify: function (title, body) { try { jb('notify', title || '', body || ''); } catch (e) {} },
     setAutoLaunch: function (b) { try { jb('setAutoLaunch', !!b); } catch (e) {} },
+    // 打卡提醒（本地通知 / 系统日历）
+    requestReminderPermissions: function () { try { jb('requestReminderPermissions'); } catch (e) {} },
+    setReminder: function (cfg) { try { jb('setReminder', JSON.stringify(cfg || {})); } catch (e) {} },
+    cancelReminder: function () { try { jb('cancelReminder'); } catch (e) {} },
     exportData: function () {
       return new Promise(function (resolve) {
         window.__smExportResolve = resolve;
@@ -131,5 +135,5 @@
     if (window.__smImportResolve) { var f = window.__smImportResolve; window.__smImportResolve = null; f(r); }
   };
 
-  window.__SM_VER = '1.4.5';
+  window.__SM_VER = '1.4.6';
 })();
