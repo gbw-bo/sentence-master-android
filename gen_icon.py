@@ -46,7 +46,7 @@ def write_png(path, size, rgba):
         f.write(chunk(b'IEND', b''))
 
 SIZES = {'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
-BASE = "/d/SentenceMasterAndroid/app/res/mipmap-"
+BASE = "D:/SentenceMasterAndroid/app/res/mipmap-"
 for d, s in SIZES.items():
     p = BASE + d + "/ic_launcher.png"
     os.makedirs(os.path.dirname(p), exist_ok=True)
