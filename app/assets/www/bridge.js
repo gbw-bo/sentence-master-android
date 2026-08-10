@@ -23,6 +23,16 @@
     else if (mq.addListener) mq.addListener(emitTheme);
   }
 
+  // 版本号比较：'1.4.5' vs '1.4.10' -> 按数字逐段比较
+  function cmpVer(a, b) {
+    var pa = String(a || '').split('.'), pb = String(b || '').split('.');
+    for (var i = 0; i < 3; i++) {
+      var x = parseInt(pa[i] || '0', 10), y = parseInt(pb[i] || '0', 10);
+      if (x !== y) return x - y;
+    }
+    return 0;
+  }
+
   window.api = {
     readData: function () {
       try { return JSON.parse(jb('readData')); } catch (e) { return null; }
@@ -64,8 +74,40 @@
     pickDataDir: function () { return { canceled: true }; },
     dataDir: function () { try { return jb('dataDir') || ''; } catch (e) { return ''; } },
     checkUpdate: function () {
-      var v = window.__SM_VER || '1.4.3';
-      return { ok: true, hasUpdate: false, latest: v, current: v, notes: '', dev: false };
+      return new Promise(function (resolve) {
+        var cur = window.__SM_VER || '1.4.4';
+        try {
+          // 从 GitHub Releases 获取最新 APK 信息（公开 API 支持跨域）
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', 'https://api.github.com/repos/gbw-bo/sentence-master-android/releases/latest', true);
+          xhr.timeout = 15000;
+          xhr.onload = function () {
+            try {
+              var d = JSON.parse(xhr.responseText);
+              var tag = d.tag_name || '';
+              var latest = String(tag).replace(/^v/i, '');
+              var downloadUrl = null;
+              if (d.assets && d.assets.length) {
+                for (var i = 0; i < d.assets.length; i++) {
+                  if (/\.apk$/i.test(d.assets[i].name || '')) {
+                    downloadUrl = d.assets[i].browser_download_url; break;
+                  }
+                }
+              }
+              if (!downloadUrl) { resolve({ ok: false, msg: '未找到 APK 安装包' }); return; }
+              if (cmpVer(latest, cur) > 0) {
+                resolve({ ok: true, hasUpdate: true, latest: latest, current: cur,
+                          notes: (d.body || '').slice(0, 500), downloadUrl: downloadUrl });
+              } else {
+                resolve({ ok: true, hasUpdate: false, latest: latest, current: cur });
+              }
+            } catch (e) { resolve({ ok: false, msg: '解析更新信息失败' }); }
+          };
+          xhr.onerror = function () { resolve({ ok: false, msg: '网络不可用，无法检查更新' }); };
+          xhr.ontimeout = function () { resolve({ ok: false, msg: '检查更新超时，请检查网络' }); };
+          xhr.send();
+        } catch (e) { resolve({ ok: false, msg: '检查更新失败' }); }
+      });
     },
     quitAndInstall: function () {},
     openExternal: function (url) { try { jb('openExternal', url); } catch (e) {} }
@@ -89,5 +131,5 @@
     if (window.__smImportResolve) { var f = window.__smImportResolve; window.__smImportResolve = null; f(r); }
   };
 
-  window.__SM_VER = '1.4.4';
+  window.__SM_VER = '1.4.5';
 })();
