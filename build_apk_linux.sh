@@ -31,7 +31,7 @@ echo "== [1/8] compile resources =="
 echo "== [2/8] link =="
 "$AAPT2" link -o "$BUILD/app-unsigned.apk" -I "$ANDROID_JAR" -R "$BUILD/res.zip" \
   --manifest "$APP/AndroidManifest.xml" \
-  -A "$APP/assets" --java "$BUILD/gen" --package com.sentencemaster --no-resource-dedup
+  -A "$APP/assets" --java "$BUILD/gen"
 
 echo "== [3/8] javac (src + generated R.java) =="
 rm -rf "$BUILD/classes"; mkdir -p "$BUILD/classes"
