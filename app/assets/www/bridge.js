@@ -89,5 +89,5 @@
     if (window.__smImportResolve) { var f = window.__smImportResolve; window.__smImportResolve = null; f(r); }
   };
 
-  window.__SM_VER = '1.4.3';
+  window.__SM_VER = '1.4.4';
 })();
