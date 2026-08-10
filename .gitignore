@@ -1,0 +1,14 @@
+# build output
+build/
+out/
+*.keystore
+# node (not used by Android build, kept for reference scripts)
+node_modules/
+npm-debug.log
+# OS
+.DS_Store
+Thumbs.db
+# stray duplicate manifest (not used by build)
+app/src/com/sentencemaster/AndroidManifest.xml
+# old Windows publish helper (superseded by GitHub Actions)
+publish-android.js

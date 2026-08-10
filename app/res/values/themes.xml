@@ -1,0 +1,17 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- 主界面：无操作栏，状态栏/导航栏用深色，Web 内容自行处理明/暗 -->
+    <style name="Theme.SentenceMaster" parent="Theme.DeviceDefault.NoActionBar">
+        <item name="android:statusBarColor">#0f1226</item>
+        <item name="android:navigationBarColor">#0f1226</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+    </style>
+
+    <!-- 启动页：全屏深色 -->
+    <style name="Theme.SentenceMaster.Splash" parent="Theme.DeviceDefault.NoActionBar">
+        <item name="android:statusBarColor">#0f1226</item>
+        <item name="android:navigationBarColor">#0f1226</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+    </style>
+</resources>

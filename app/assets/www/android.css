@@ -1,0 +1,85 @@
+/* 句式大师 · Android 专属样式
+ * 手机：竖屏，顶部应用栏 + 底部 5 项导航栏。
+ * 平板横屏：还原为 Windows 端布局（顶部品牌栏 + 左侧侧栏 + 内容）。
+ */
+
+/* ---------- 基础布局（手机优先） ---------- */
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* 覆盖 Windows 样式里的 #app 高度，改为弹性填充剩余空间 */
+#app {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  display: flex;
+}
+
+#main { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* 手机端：隐藏 Windows 的窗口标题栏与左侧栏，改用顶栏 + 底栏 */
+#chrome { display: none; }
+#sidebar { display: none; }
+
+/* 顶部应用栏（仅手机显示，兼作安全区与品牌） */
+#appbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
+  background: var(--panel, #ffffff);
+  border-bottom: 1px solid var(--line, #ececf3);
+  color: var(--ink, #1a1a2e);
+}
+#appbar .logo {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #4f46e5; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px;
+}
+#appbar .title { font-weight: 700; font-size: 16px; letter-spacing: .5px; }
+
+/* 底部导航栏（仅手机显示） */
+.bottom-nav {
+  display: flex;
+  background: var(--panel, #ffffff);
+  border-top: 1px solid var(--line, #ececf3);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav .nav-item {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 2px 6px;
+  font-size: 11px;
+  line-height: 1.1;
+  color: var(--ink-soft, #8a8aa3);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.bottom-nav .nav-item .ic { font-size: 21px; line-height: 1; }
+.bottom-nav .nav-item .lb { white-space: nowrap; }
+.bottom-nav .nav-item.active { color: var(--accent, #4f46e5); font-weight: 700; }
+.bottom-nav .nav-item.active .ic { transform: translateY(-1px); filter: drop-shadow(0 1px 2px rgba(79,70,229,.35)); }
+
+/* 提示弹窗在手机上抬到底栏之上，避免被遮挡 */
+.toast { bottom: calc(env(safe-area-inset-bottom) + 72px) !important; }
+
+/* ---------- 平板横屏：还原 Windows 端布局 ---------- */
+@media (min-width: 840px) and (orientation: landscape) {
+  #appbar { display: none; }
+  .bottom-nav { display: none; }
+  #chrome { display: flex !important; }
+  #sidebar { display: flex !important; }
+  #app { flex-direction: row !important; }
+}
