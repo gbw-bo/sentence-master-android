@@ -41,9 +41,10 @@ def main():
     gen = os.path.join(BUILD, "gen")
     shutil.rmtree(gen, ignore_errors=True)
     os.makedirs(gen, exist_ok=True)
-    run(f'"{AAPT2}" link -o "{unsigned}" -I "{PLATFORM_JAR}" -R "{res_zip}" '
+    run(f'"{AAPT2}" link -o "{unsigned}" -I "{PLATFORM_JAR}" '
         f'--manifest "{os.path.join(APP, "AndroidManifest.xml")}" '
-        f'-A "{os.path.join(APP, "assets")}" --java "{gen}"')
+        f'-A "{os.path.join(APP, "assets")}" --java "{gen}" '
+        f'"{res_zip}"')
     # 3. javac
     classes = os.path.join(BUILD, "classes")
     shutil.rmtree(classes, ignore_errors=True)
