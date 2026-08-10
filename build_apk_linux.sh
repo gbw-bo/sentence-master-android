@@ -42,10 +42,12 @@ GENSRCS=$(find "$BUILD/gen" -name '*.java')
   -d "$BUILD/classes" $SRCS $GENSRCS
 
 echo "== [4/8] d8 -> classes.dex =="
-"$D8" --release --min-api 24 --lib "$ANDROID_JAR" --output "$BUILD/classes.dex" "$BUILD/classes"
+mkdir -p "$BUILD/dex"
+CLS=$(find "$BUILD/classes" -name '*.class')
+"$D8" --release --min-api 24 --lib "$ANDROID_JAR" --output "$BUILD/dex" $CLS
 
 echo "== [5/8] inject classes.dex into apk =="
-python3 - "$BUILD/app-unsigned.apk" "$BUILD/classes.dex" "$BUILD/app-nodx.apk" <<'PY'
+python3 - "$BUILD/app-unsigned.apk" "$BUILD/dex/classes.dex" "$BUILD/app-nodx.apk" <<'PY'
 import sys, zipfile, shutil, os
 unsigned, dex, out = sys.argv[1], sys.argv[2], sys.argv[3]
 tmp = os.path.join(os.path.dirname(out), "_unzip")
