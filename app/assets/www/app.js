@@ -1,6 +1,6 @@
 /* ============ 句式大师 1.0 · 渲染层逻辑 ============ */
 var api = window.api;
-const pad = n => String(n).padStart(2, '0');
+function pad(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 const yKey = (off = 0) => { const d = new Date(); d.setDate(d.getDate() + off); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
 const $ = (s, r = document) => r.querySelector(s);
@@ -25,7 +25,7 @@ async function setThemeMode(mode) {
   applyTheme(mode === 'dark' || (mode === 'system' && sysDark));
   try { api.applyTheme(mode); } catch (e) {}
   const seg = document.getElementById('setTheme');
-  if (seg) [...seg.querySelectorAll('button')].forEach(b => b.classList.toggle('active', b.dataset.v === mode));
+  if (seg) Array.prototype.slice.call(seg.querySelectorAll('button')).forEach(b => b.classList.toggle('active', b.dataset.v === mode));
 }
 
 /* ---------- 工具 ---------- */
@@ -62,13 +62,14 @@ function ensureTodayPlan() {
   const stage = DATA.settings.stage || 'all';
   const inStage = s => stage === 'all' || stageOf(s) === stage;
   let ids = (DATA.todayPlan.ids || []).filter(id => byId[id] && inStage(byId[id]));
-  const done = (DATA.todayPlan.doneIds || []).filter(id => ids.includes(id));
+  const done = (DATA.todayPlan.doneIds || []).filter(id => ids.indexOf(id) >= 0);
   if (ids.length < goal) {
     const isLearned = id => (DATA.progress[id] || {}).status === 'learned';
-    const pool = SENTENCES.filter(s => !ids.includes(s.id) && inStage(s)).sort((a, b) => {
+    const pool = SENTENCES.filter(s => ids.indexOf(s.id) < 0 && inStage(s)).sort((a, b) => {
       const la = isLearned(a.id) ? 1 : 0, lb = isLearned(b.id) ? 1 : 0;
       if (la !== lb) return la - lb;
-      return (DATA.progress[a.id]?.due || 0) - (DATA.progress[b.id]?.due || 0);
+      const pa = DATA.progress[a.id], pb = DATA.progress[b.id];
+      return ((pa && pa.due) ? pa.due : 0) - ((pb && pb.due) ? pb.due : 0);
     });
     while (ids.length < goal && pool.length) ids.push(pool.shift().id);
   }
@@ -93,7 +94,7 @@ function markLearned(id, writing, creative) {
   if (creative && creative.trim()) p.creative = creative.trim();
   DATA.progress[id] = p;
   if (writing && writing.trim()) DATA.writings[id] = writing.trim();
-  if (!DATA.todayPlan.doneIds.includes(id)) DATA.todayPlan.doneIds.push(id);
+  if (DATA.todayPlan.doneIds.indexOf(id) < 0) DATA.todayPlan.doneIds.push(id);
   updateStreak();
 }
 function updateStreak() {
@@ -186,7 +187,7 @@ let navStack = [];
 const TOP_PAGES = ['learn', 'review', 'library', 'template', 'me'];
 async function navigate(page, opts) {
   opts = opts || {};
-  if (TOP_PAGES.includes(page)) navStack = [];
+  if (TOP_PAGES.indexOf(page) >= 0) navStack = [];
   else if (!opts.noPush && currentPage) navStack.push(currentPage);
   currentPage = page;
   const act = (page === 'settings' || page === 'update' || page === 'history') ? 'me' : page;
@@ -268,7 +269,7 @@ function renderLearn() {
   html += `<div class="plan-list">`;
   plan.ids.forEach((id, i) => {
     const s = byId[id]; if (!s) return;
-    const isDone = plan.doneIds.includes(id);
+    const isDone = plan.doneIds.indexOf(id) >= 0;
     const active = (learnState.sentenceId === id);
     html += `<div class="plan-row ${isDone ? 'done' : ''}" ${isDone ? '' : `onclick="pickSentence('${id}')"`} style="${active && !isDone ? 'border-color:var(--accent);box-shadow:var(--shadow)' : ''}">
       <div class="idx">${isDone ? '✓' : i + 1}</div>
@@ -279,8 +280,8 @@ function renderLearn() {
   html += `</div>`;
 
   // 当前句式流程
-  if (!learnState.sentenceId || !plan.ids.includes(learnState.sentenceId) || plan.doneIds.includes(learnState.sentenceId)) {
-    learnState.sentenceId = plan.ids.find(id => !plan.doneIds.includes(id));
+  if (!learnState.sentenceId || plan.ids.indexOf(learnState.sentenceId) < 0 || plan.doneIds.indexOf(learnState.sentenceId) >= 0) {
+    learnState.sentenceId = plan.ids.find(id => !plan.doneIds.indexOf(id) >= 0);
     learnState.step = 0;
   }
   if (learnState.sentenceId) html += renderStepFlow(byId[learnState.sentenceId]);
@@ -290,7 +291,7 @@ function renderLearn() {
 }
 
 function pickSentence(id) {
-  if ((DATA.todayPlan.doneIds || []).includes(id)) return;
+  if ((DATA.todayPlan.doneIds || []).indexOf(id) >= 0) return;
   learnState.sentenceId = id; learnState.step = 0;
   $('#main').innerHTML = renderLearn();
 }
@@ -401,7 +402,8 @@ async function saveWriteNow(id) {
   toast('已保存到历史 ✔');
 }
 function fmtDate(ts) {
-  const d = new Date(ts); const p = n => String(n).padStart(2, '0');
+  const d = new Date(ts);
+  function p(n) { n = String(n); return n.length < 2 ? '0' + n : n; }
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 /* 查看历史已迁移至「我的 → 历史记录」页，原 per-sentence 弹窗不再需要 */
@@ -440,7 +442,7 @@ async function finishLearn(id) {
 function resetToday() {
   // 加练一个：只往今日计划补一个未学的句式，不改动持久化的每日目标
   const learned = id => (DATA.progress[id] || {}).status === 'learned';
-  const pool = SENTENCES.filter(s => !DATA.todayPlan.ids.includes(s.id))
+  const pool = SENTENCES.filter(s => DATA.todayPlan.ids.indexOf(s.id) < 0)
     .sort((a, b) => (learned(a.id) ? 1 : 0) - (learned(b.id) ? 1 : 0));
   if (pool.length) DATA.todayPlan.ids.push(pool[0].id);
   save();
@@ -615,7 +617,7 @@ function openSentence(id) {
   `);
 }
 async function learnFromLib(id) {
-  if (!DATA.todayPlan.ids.includes(id)) DATA.todayPlan.ids.push(id);
+  if (DATA.todayPlan.ids.indexOf(id) < 0) DATA.todayPlan.ids.push(id);
   DATA.todayPlan.doneIds = DATA.todayPlan.doneIds.filter(x => x !== id);
   await save(); closeModal();
   learnState.sentenceId = id; learnState.step = 0;
@@ -746,7 +748,7 @@ async function bindSettings() {
   const m = $('#setMin'); if (m) m.onchange = async () => { DATA.settings.minimizeToTray = m.checked; await save(); };
   const sh = $('#setShow'); if (sh) sh.onchange = async () => { DATA.settings.showOnLaunch = sh.checked; await save(); };
   const seg = $('#setTheme');
-  if (seg) [...seg.querySelectorAll('button')].forEach(b => b.classList.toggle('active', b.dataset.v === (DATA.settings.theme || 'system')));
+  if (seg) Array.prototype.slice.call(seg.querySelectorAll('button')).forEach(b => b.classList.toggle('active', b.dataset.v === (DATA.settings.theme || 'system')));
   const tr = $('#setTrans');
   if (tr) tr.oninput = async () => { DATA.settings.transparency = parseInt(tr.value, 10) || 100; applyTransparency(DATA.settings.transparency); await save(); };
 }
@@ -790,15 +792,17 @@ function bindMe() { /* 交互均通过内联 onclick 处理，无需额外绑定
 function renderHistory() {
   const learned = SENTENCES.filter(s => (DATA.progress[s.id] || {}).status === 'learned');
   const writtenIds = Object.keys(DATA.writeHistory || {});
-  const ids = new Set([...learned.map(s => s.id), ...writtenIds]);
-  const list = [...ids].map(id => byId[id]).filter(Boolean);
+  const ids = new Set(learned.map(s => s.id).concat(writtenIds));
+  const list = [];
+  ids.forEach(function (id) { const s = byId[id]; if (s) list.push(s); });
   // 排序：按学会时间或最近一次写作时间，新的在前
   list.sort((a, b) => {
     const ta = (DATA.progress[a.id] || {}).learnedAt || (DATA.writeHistory[a.id] && DATA.writeHistory[a.id][0] ? DATA.writeHistory[a.id][0].ts : 0);
     const tb = (DATA.progress[b.id] || {}).learnedAt || (DATA.writeHistory[b.id] && DATA.writeHistory[b.id][0] ? DATA.writeHistory[b.id][0].ts : 0);
     return tb - ta;
   });
-  const writeCount = Object.values(DATA.writeHistory || {}).reduce((n, arr) => n + (arr ? arr.length : 0), 0);
+  const wh = DATA.writeHistory || {}, whKeys = Object.keys(wh);
+  const writeCount = whKeys.reduce((n, k) => n + (wh[k] ? wh[k].length : 0), 0);
   let html = `<div class="page">
     <div class="page-head"><button class="back-btn" onclick="navBack()">← 返回</button></div>
     <h1>历史记录</h1>
