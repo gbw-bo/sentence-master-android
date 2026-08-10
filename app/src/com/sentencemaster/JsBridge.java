@@ -36,7 +36,7 @@ public class JsBridge {
             + "\"progress\":{},\"history\":[],\"writings\":{},"
             + "\"streak\":{\"current\":0,\"best\":0,\"lastDate\":\"\"},"
             + "\"todayPlan\":{\"date\":\"\",\"ids\":[],\"doneIds\":[]},\"writeHistory\":{}}";
-    static final String VER = "1.4.5";
+    static final String VER = "1.4.6";
 
     JsBridge(MainActivity activity, WebView webView) {
         this.activity = activity;
@@ -109,6 +109,24 @@ public class JsBridge {
             activity.startActivity(i);
         } catch (Exception ignore) {
         }
+    }
+
+    /** 请求提醒所需运行时权限（通知 / 日历） */
+    @JavascriptInterface
+    public void requestReminderPermissions() {
+        activity.runOnUiThread(() -> activity.requestReminderPermissions());
+    }
+
+    /** 设置打卡提醒：{enabled, time:"HH:MM", channel:"notification"|"calendar"|"both"} */
+    @JavascriptInterface
+    public void setReminder(String json) {
+        activity.runOnUiThread(() -> activity.setReminder(json));
+    }
+
+    /** 取消打卡提醒 */
+    @JavascriptInterface
+    public void cancelReminder() {
+        activity.runOnUiThread(() -> activity.cancelReminder());
     }
 
     /** 导出：读取当前数据，由 Activity 弹出系统“保存为”选择器 */
