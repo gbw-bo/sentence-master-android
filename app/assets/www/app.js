@@ -846,6 +846,7 @@ function renderHistory() {
         <span class="tag" style="background:var(--accent-soft);color:var(--accent)">${esc(s.cat)}</span>
         <span style="font-weight:800">${esc(s.cn)}</span>
         ${learnedTag} ${learnedDate}
+        <span style="margin-left:auto"><button class="btn sm" style="border-color:rgba(209,52,56,.4);color:var(--bad)" onclick="deleteHistory('${s.id}')">🗑 删除</button></span>
       </div>
       <div class="formula" style="margin-top:8px">${esc(s.en)}</div>
       <div style="font-weight:700;margin:14px 0 4px;font-size:14px">✍️ 我的写作（${hist.length}）</div>
@@ -854,6 +855,53 @@ function renderHistory() {
   });
   html += `</div>`;
   return html;
+}
+
+/* ============ 删除历史数据（三个可独立勾选的选项） ============ */
+function deleteHistory(id) {
+  const s = byId[id] || {};
+  modal(`<div style="text-align:left">
+    <h2 style="margin-bottom:4px;font-size:19px">删除历史数据</h2>
+    <div style="color:var(--ink-soft);font-size:13px;margin-bottom:6px">「${esc(s.cn || '')}」— 请勾选要删除的内容（可多选）：</div>
+    <label class="del-opt"><input type="checkbox" id="delHistRec" checked><span>删除本条历史数据<em class="del-desc">从历史记录中移除该条目</em></span></label>
+    <label class="del-opt"><input type="checkbox" id="delHistLearn"><span>删除学习记录<em class="del-desc">该句式将重置为未学习状态</em></span></label>
+    <label class="del-opt"><input type="checkbox" id="delHistWrite"><span>仅删除本句的造句<em class="del-desc">清空已保存的句子，可重新造句</em></span></label>
+    <div class="btn-row" style="justify-content:flex-end;margin-top:18px">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn" style="background:var(--bad);color:#fff;border-color:var(--bad)" onclick="confirmDeleteHistory('${id}')">确认删除</button>
+    </div>
+  </div>`);
+}
+function confirmDeleteHistory(id) {
+  const chk = n => { const e = document.getElementById(n); return e ? e.checked : false; };
+  const delRec = chk('delHistRec'), delLearn = chk('delHistLearn'), delWrite = chk('delHistWrite');
+  if (!delRec && !delLearn && !delWrite) { toast('请至少勾选一项再删除'); return; }
+  if (delRec) {
+    // 删除本条历史数据：进度 + 写作历史 + 造句 + 今日计划一并移除
+    delete DATA.progress[id];
+    delete DATA.writeHistory[id];
+    delete DATA.writings[id];
+    if (DATA.todayPlan) {
+      DATA.todayPlan.ids = (DATA.todayPlan.ids || []).filter(x => x !== id);
+      DATA.todayPlan.doneIds = (DATA.todayPlan.doneIds || []).filter(x => x !== id);
+    }
+  } else {
+    if (delLearn) {
+      // 删除学习记录：该句式重置为未学习
+      delete DATA.progress[id];
+      if (DATA.todayPlan) DATA.todayPlan.doneIds = (DATA.todayPlan.doneIds || []).filter(x => x !== id);
+    }
+    if (delWrite) {
+      // 仅删除本句的造句
+      delete DATA.writeHistory[id];
+      delete DATA.writings[id];
+    }
+  }
+  save();
+  closeModal();
+  renderHistory();
+  renderSidebar();
+  toast('已删除 ✔');
 }
 
 /* ============ 更新 ============ */
@@ -874,7 +922,8 @@ async function renderUpdate() {
   <div class="card" style="margin-top:16px">
     <div style="font-weight:800;margin-bottom:6px">更新日志</div>
     <div class="changelog"><ul>
-      <li><b>v1.4.6</b>（当前）移动端体验升级：① 深色模式全面适配——界面使用显式深色背景与配色，不再受 WebView 白底影响；② 新增打卡提醒——可开启系统通知提醒，或将每日打卡写入系统日历（两种方式可同时开启）；③ 兼容安卓 16（目标 SDK 升至 36）；④ 应用图标换成与电脑端一致的图标。</li>
+      <li><b>v1.4.7</b>（当前）历史数据可删除：在「我的 → 历史记录」的每条句式上点击「🗑 删除」，弹出三个可**独立勾选**的选项——① 删除本条历史数据（移除该条历史记录本身）；② 删除学习记录（该句式重置为未学习状态，可重新学习）；③ 仅删除本句的造句（清空已保存的句子，可重新造句）。三选项可任意多选。电脑端与手机端同步更新，双端版本统一为 1.4.7。</li>
+      <li><b>v1.4.6</b>移动端体验升级：① 深色模式全面适配——界面使用显式深色背景与配色，不再受 WebView 白底影响；② 新增打卡提醒——可开启系统通知提醒，或将每日打卡写入系统日历（两种方式可同时开启）；③ 兼容安卓 16（目标 SDK 升至 36）；④ 应用图标换成与电脑端一致的图标。</li>
       <li><b>v1.4.5</b>Android 版适配与设置精简：① 兼容安卓 8 – 安卓 15 安装（升级目标 SDK 至 35）；② 移除仅适用于电脑端的设置项——开机自启动、每日提醒、最小化到托盘、模块透明度等，设置页只保留移动端适用的选项（每日目标 / 外观主题 / 学习数据）；③ 更新改为从 GitHub 获取 APK 安装包，点击即可用浏览器下载安装。</li>
       <li><b>v1.4.4</b>修复白屏与横屏按钮：① 修复部分安卓设备（旧版 WebView）打开后内容空白的问题——兼容了旧版 WebView 的 JS 语法；② 平板横屏时不再显示右上角「最小化 / 关闭」按钮。</li>
       <li><b>v1.4.3</b>新增「历史记录」与更新数据保护：① 将原本放在「学习中」第 6 步的「查看历史」移出，在「我的」页新增独立「历史记录」入口，可查看你学过的全部句式与练习时写下的每一句话；② 强化更新安全——每次更新应用前自动备份学习数据与所有设置项，更新后若本地数据意外丢失 / 损坏会自动从备份恢复，确保提醒时间、学习阶段等设置项与学习进度在更新后完整保留。</li>
