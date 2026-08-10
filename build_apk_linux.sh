@@ -29,9 +29,10 @@ echo "== [1/8] compile resources =="
 "$AAPT2" compile --dir "$APP/res" -o "$BUILD/res.zip"
 
 echo "== [2/8] link =="
-"$AAPT2" link -o "$BUILD/app-unsigned.apk" -I "$ANDROID_JAR" -R "$BUILD/res.zip" \
+"$AAPT2" link -o "$BUILD/app-unsigned.apk" -I "$ANDROID_JAR" \
   --manifest "$APP/AndroidManifest.xml" \
-  -A "$APP/assets" --java "$BUILD/gen"
+  -A "$APP/assets" --java "$BUILD/gen" \
+  "$BUILD/res.zip"
 
 echo "== [3/8] javac (src + generated R.java) =="
 rm -rf "$BUILD/classes"; mkdir -p "$BUILD/classes"
