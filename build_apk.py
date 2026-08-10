@@ -63,8 +63,16 @@ def main():
     run(f'"{JAVA}" -encoding UTF-8 -source 17 -target 17 -cp "{PLATFORM_JAR}" '
         f'-d "{classes}" ' + " ".join(f'"{s}"' for s in srcs + gen_srcs))
     # 4. d8 -> dex
-    dex = os.path.join(BUILD, "classes.dex")
-    run(f'"{D8}" --release --lib "{PLATFORM_JAR}" --output "{dex}" "{classes}"')
+    dexdir = os.path.join(BUILD, "dex")
+    os.makedirs(dexdir, exist_ok=True)
+    cls_files = []
+    for root, _, files in os.walk(classes):
+        for f in files:
+            if f.endswith(".class"):
+                cls_files.append(os.path.join(root, f))
+    run(f'"{D8}" --release --min-api 24 --lib "{PLATFORM_JAR}" --output "{dexdir}" '
+        + " ".join(f'"{c}"' for c in cls_files))
+    dex = os.path.join(dexdir, "classes.dex")
     # 5. 注入 classes.dex
     nodx = os.path.join(BUILD, "app-nodx.apk")
     tmp = os.path.join(BUILD, "unzip")
