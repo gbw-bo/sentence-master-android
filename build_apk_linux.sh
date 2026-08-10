@@ -4,8 +4,8 @@
 set -euo pipefail
 
 SDK="${ANDROID_SDK_ROOT:?ANDROID_SDK_ROOT not set}"
-BT="$SDK/build-tools/34.0.0"
-PLATFORM="$SDK/platforms/android-34"
+BT="$SDK/build-tools/35.0.0"
+PLATFORM="$SDK/platforms/android-35"
 ANDROID_JAR="$PLATFORM/android.jar"
 AAPT2="$BT/aapt2"
 D8="$BT/d8"
